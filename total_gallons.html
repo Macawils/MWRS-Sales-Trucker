@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Total Gallons - Calendar Tracker</title>
+
+<style>
+  body { font-family: Arial; background:#e5e7eb; padding:20px; }
+  .header { text-align:center; margin-bottom:20px; }
+  .header h1 { font-size:28px; }
+
+  .nav-buttons { display:flex; gap:10px; margin-bottom:20px; }
+
+  .btn { padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+  .btn-primary { background:#2563eb; color:white; }
+  .btn-success { background:#16a34a; color:white; }
+
+  .calendar-container {
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    max-width:700px;
+    margin:auto;
+  }
+
+  .month-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+  }
+
+  .month-header h2 {
+    margin:0;
+  }
+
+  .weekday {
+    font-weight:bold;
+    text-align:center;
+    padding:10px;
+  }
+
+  .calendar-grid {
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap:5px;
+  }
+
+  .day {
+    background:#f3f4f6;
+    padding:20px 10px;
+    text-align:center;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+  }
+
+  .day:hover {
+    background:#cbd5e1;
+  }
+
+  .day.today {
+    background:#1874ff;
+    color:white;
+    font-weight:bold;
+  }
+
+  .day-value {
+    font-size:20px;
+    font-weight:bold;
+  }
+
+  .gallon-value {
+    color:#152dff;
+    font-size:13px;
+  }
+
+  #modal {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.5); display:none;
+    justify-content:center; align-items:center;
+  }
+
+  #modalContent {
+    background:white; padding:25px; border-radius:12px;
+    width:300px; text-align:center;
+  }
+
+  input { padding:10px; width:100%; margin-top:10px; }
+</style>
+
+</head>
+<body>
+    
+<div class="nav-buttons">
+  <button class="btn btn-primary" onclick="window.location.href='index.html'">HOME</button>
+  <button class="btn btn-success" onclick="window.location.href='total_gallons.html'">TOTAL GALLONS</button>
+</div>
+
+<div class="header">
+  <h1>Total Gallons Collected Per Day</h1>
+</div>
+
+
+
+<div class="calendar-container">
+  <div class="month-header">
+    <button class="btn btn-primary" onclick="changeMonth(-1)">‹</button>
+    <h2 id="monthLabel"></h2>
+    <button class="btn btn-primary" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="calendar-grid" id="weekdayLabels">
+    <div class="weekday">Sun</div>
+    <div class="weekday">Mon</div>
+    <div class="weekday">Tue</div>
+    <div class="weekday">Wed</div>
+    <div class="weekday">Thu</div>
+    <div class="weekday">Fri</div>
+    <div class="weekday">Sat</div>
+  </div>
+
+  <div class="calendar-grid" id="calendar"></div>
+</div>
+
+<div id="modal">
+  <div id="modalContent">
+    <h3 id="modalDate"></h3>
+    <input type="number" id="gallonInput" placeholder="Enter gallons" />
+    <button class="btn btn-success" style="margin-top:15px;" onclick="saveGallons()">Save</button>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+let gallonsData = JSON.parse(localStorage.getItem("gallonsData") || "{}");
+
+let currentDate = new Date();
+let currentMonth = currentDate.getMonth();
+let currentYear = currentDate.getFullYear();
+
+let selectedDate = "";
+
+function loadCalendar() {
+  const monthLabel = document.getElementById("monthLabel");
+  const calendar = document.getElementById("calendar");
+
+  const monthNames = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
+
+  monthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+  calendar.innerHTML = "";
+
+  let firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  let totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    calendar.innerHTML += `<div></div>`;
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    let dateString = `${currentYear}-${currentMonth+1}-${day}`;
+    let gallons = gallonsData[dateString] || "";
+
+    let isToday =
+      day === currentDate.getDate() &&
+      currentMonth === new Date().getMonth() &&
+      currentYear === new Date().getFullYear();
+
+    calendar.innerHTML += `
+      <div class="day ${isToday ? "today" : ""}" onclick="openModal('${dateString}')">
+        <div class="day-value">${day}</div>
+        <div class="gallon-value">${gallons ? gallons + " gal" : ""}</div>
+      </div>
+    `;
+  }
+}
+
+function openModal(date) {
+  selectedDate = date;
+  document.getElementById("modalDate").innerText = "Day: " + date;
+  document.getElementById("gallonInput").value = gallonsData[date] || "";
+  document.getElementById("modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function saveGallons() {
+  let val = document.getElementById("gallonInput").value;
+  if (val === "") { alert("Enter a value!"); return; }
+
+  gallonsData[selectedDate] = val;
+
+  localStorage.setItem("gallonsData", JSON.stringify(gallonsData));
+
+  closeModal();
+  loadCalendar();
+}
+
+function changeMonth(direction) {
+  currentMonth += direction;
+
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  } else if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+
+  loadCalendar();
+}
+
+loadCalendar();
+</script>
+
+</body>
+</html>

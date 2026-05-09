@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly Sales Report</title>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { background: #e5e7eb; padding: 25px; color: #111827; }
+    .container { max-width: 1450px; margin: auto; }
+    .header { margin-bottom: 20px; text-align: center; }
+    .header h1 { font-size: 34px; margin-bottom: 8px; }
+    .header p { color: #4b5563; }
+
+    .top-controls {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: end;
+    }
+
+    .input-group { display: flex; flex-direction: column; min-width: 220px; flex: 1; }
+    .input-group label { font-size: 14px; margin-bottom: 7px; font-weight: bold; }
+    .input-group input, .input-group select {
+      padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+    }
+
+    .btn { border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: #dc2626; color: white; padding: 8px 14px; }
+
+    .sheet-container { overflow-x: auto; background: white; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+    table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+    th, td { border: 1px solid #cbd5e1; padding: 12px; font-size: 13px; text-align: left; }
+    thead th { background: #f3f4f6; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+
+    .section-row td { background: #111827; color: white; font-weight: bold; font-size: 14px; }
+    .summary-row td { background: #fef3c7; font-weight: bold; color: #92400e; }
+    .total-row td { background: #fde68a; color: #991b1b; font-weight: bold; font-size: 15px; }
+
+    .action-buttons { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .footer-summary { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+    .summary-card {
+      background: white; padding: 20px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .summary-card h3 { margin-bottom: 10px; color: #374151; }
+    .summary-card p { font-size: 28px; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+  <button class="btn btn-primary" onclick="window.location.href='index.html'">HOME</button>
+  <button class="btn btn-success" onclick="window.location.href='total_gallons.html'">TOTAL GALLONS</button>
+</div>
+
+<div class="container">
+
+  <div class="header">
+    <h1>MACAWILI WATER REFILLING STATION</h1>
+    <p>MWRS Monthly Profit and Expenses Tracker</p>
+  </div>
+
+  <div class="top-controls">
+    <div class="input-group">
+      <label>Category</label>
+      <select id="expenseCategory">
+        <option value="A.1 SALES">A.1 SALES</option>
+        <option value="A.2 SALES">A.2 SALES</option>
+        <option value="B.1 EXPENSES">B.1 EXPENSES</option>
+        <option value="C.1 FOR DEPOSIT">C.1 FOR DEPOSIT</option>
+        <option value="D.1 PAUTANG CURRENT">D.1 PAUTANG CURRENT</option>
+        <option value="E.1 PAUTANG PREVIOUS">E.1 PAUTANG PREVIOUS</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Date</label>
+      <input type="date" id="expenseDate" />
+    </div>
+
+    <div class="input-group">
+      <label>Particulars</label>
+      <input type="text" id="expenseName" placeholder="Enter description" />
+    </div>
+
+    <div class="input-group">
+      <label>Quantity</label>
+      <input type="number" id="expenseQty" placeholder="0" />
+    </div>
+
+    <div class="input-group">
+      <label>Price / Qty</label>
+      <input type="number" id="expensePrice" placeholder="0" />
+    </div>
+
+    <div class="input-group">
+      <label>Remarks</label>
+      <input type="text" id="expenseRemarks" placeholder="Optional remarks" />
+    </div>
+
+    <button class="btn btn-primary" onclick="addExpense()">Add Entry</button>
+  </div>
+
+  <div class="sheet-container">
+    <table id="expenseTable">
+      <thead>
+        <tr>
+          <th>CATEGORY</th>
+          <th>DATE</th>
+          <th>PARTICULARS</th>
+          <th>QTY</th>
+          <th>PRICE/QTY</th>
+          <th>AMOUNT</th>
+          <th>REMARKS</th>
+          <th>ACTION</th>
+        </tr>
+      </thead>
+
+      <tbody></tbody>
+
+      <tfoot>
+        <tr class="summary-row">
+          <td colspan="5">TOTAL EXPENSES (B–D)</td>
+          <td id="tableTotalExpenses">₱0.00</td>
+          <td colspan="2"></td>
+        </tr>
+
+        <tr class="total-row">
+          <td colspan="5">REMAINING PROFIT (A – B – C – D)</td>
+          <td id="tableRemainingProfit">₱0.00</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="footer-summary">
+
+    <div class="summary-card">
+      <h3>Total Monthly Profit</h3>
+      <p id="totalProfit">₱0.00</p>
+    </div>
+
+    <div class="summary-card">
+      <h3>Total Expenses</h3>
+      <p id="totalExpenses">₱0.00</p>
+    </div>
+
+    <div class="summary-card">
+      <h3>Total Cash on Hand</h3>
+      <p id="remainingProfit">₱0.00</p>
+    </div>
+
+    <div class="summary-card">
+      <h3>Collection Pautang (Previous Month)</h3>
+      <p id="totalCashOnHand">₱0.00</p>
+    </div>
+
+    <div class="summary-card">
+      <h3>FINAL TOTAL AMOUNT FOR DEPOSIT</h3>
+      <p id="finalTotal">₱0.00</p>
+    </div>
+
+  </div>
+
+  <div class="action-buttons">
+    <button class="btn btn-success" onclick="exportExcel()">Export to Excel</button>
+  </div>
+
+</div>
+
+<script>
+let expenses = [];
+
+function formatCurrency(value) {
+  return "₱" + Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function addExpense() {
+  const category = document.getElementById("expenseCategory").value;
+  const date = document.getElementById("expenseDate").value;
+  const name = document.getElementById("expenseName").value;
+  const qty = parseFloat(document.getElementById("expenseQty").value) || 0;
+  const price = parseFloat(document.getElementById("expensePrice").value) || 0;
+  const remarks = document.getElementById("expenseRemarks").value;
+
+  if (!date || !name || qty <= 0 || price <= 0) {
+    alert("Please complete all required fields.");
+    return;
+  }
+
+  const amount = qty * price;
+
+  expenses.push({ category, date, name, qty, price, amount, remarks });
+
+  renderTable();
+  clearInputs();
+}
+
+function clearInputs() {
+  document.getElementById("expenseDate").value = "";
+  document.getElementById("expenseName").value = "";
+  document.getElementById("expenseQty").value = "";
+  document.getElementById("expensePrice").value = "";
+  document.getElementById("expenseRemarks").value = "";
+}
+
+function deleteExpense(index) {
+  expenses.splice(index, 1);
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#expenseTable tbody");
+  tbody.innerHTML = "";
+
+  let currentCategory = "";
+
+  expenses.forEach((expense, index) => {
+    if (expense.category !== currentCategory) {
+      currentCategory = expense.category;
+      tbody.innerHTML += `<tr class="section-row"><td colspan="8">${currentCategory}</td></tr>`;
+    }
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${expense.category}</td>
+        <td>${expense.date}</td>
+        <td>${expense.name}</td>
+        <td>${expense.qty}</td>
+        <td>${formatCurrency(expense.price)}</td>
+        <td>${formatCurrency(expense.amount)}</td>
+        <td>${expense.remarks}</td>
+        <td><button class="btn btn-danger" onclick="deleteExpense(${index})">Delete</button></td>
+      </tr>
+    `;
+  });
+
+  updateSummary();
+}
+
+function updateSummary() {
+  let totalA = 0;
+  let totalB = 0;
+  let totalC = 0;
+  let totalD = 0;
+  let totalE = 0;
+
+  expenses.forEach(item => {
+    if (item.category.startsWith("A.")) totalA += item.amount;
+    if (item.category.startsWith("B.")) totalB += item.amount;
+    if (item.category.startsWith("C.")) totalC += item.amount;
+    if (item.category.startsWith("D.")) totalD += item.amount;
+    if (item.category.startsWith("E.")) totalE += item.amount;
+  });
+
+  const totalExpenses = totalB + totalC + totalD;
+  const remaining = totalA - totalExpenses;
+  const finalTotal = totalC + totalE + remaining;
+
+  document.getElementById("totalProfit").innerText = formatCurrency(totalA);
+  document.getElementById("totalExpenses").innerText = formatCurrency(totalExpenses);
+  document.getElementById("remainingProfit").innerText = formatCurrency(remaining);
+
+  document.getElementById("tableTotalExpenses").innerText = formatCurrency(totalExpenses);
+  document.getElementById("tableRemainingProfit").innerText = formatCurrency(remaining);
+
+  document.getElementById("totalCashOnHand").innerText = formatCurrency(totalE);
+  document.getElementById("finalTotal").innerText = formatCurrency(finalTotal);
+}
+
+function exportExcel() {
+  const mapLabels = {
+    "A.1 SALES": "A.1 SALES",
+    "A.2 SALES": "A.2 SALES",
+    "B.1 EXPENSES": "B.1 EXPENSES",
+    "C.1 FOR DEPOSIT": "C.1 FOR DEPOSIT (AQUALIFE)",
+    "D.1 PAUTANG CURRENT": "D.1 PAUTANG (CURRENT MONTH)",
+    "E.1 PAUTANG PREVIOUS": "E.1 COLLECTION BALANCE (PREVIOUS MONTH)"
+  };
+
+  const groupOrder = [
+    "A.1 SALES",
+    "A.2 SALES",
+    "B.1 EXPENSES",
+    "C.1 FOR DEPOSIT",
+    "D.1 PAUTANG CURRENT",
+    "E.1 PAUTANG PREVIOUS"
+  ];
+
+  let output = [];
+
+  output.push({ Category: "MACAWILI WATER REFILLING STATION" });
+  output.push({ Category: "MONTHLY SALES REPORT" });
+  output.push({});
+  output.push({});
+
+  groupOrder.forEach(group => {
+    const label = mapLabels[group];
+
+    output.push({ Category: label });
+
+    expenses
+      .filter(e => e.category === group)
+      .forEach(item => {
+        output.push({
+          Category: label,
+          Date: item.date,
+          Particulars: item.name,
+          Qty: item.qty,
+          "Price/Qty": item.price,
+          Amount: item.amount,
+          Remarks: item.remarks
+        });
+      });
+
+    output.push({});
+  });
+
+  let totalA = 0, totalB = 0, totalC = 0, totalD = 0, totalE = 0;
+
+  expenses.forEach(i => {
+    if (i.category.startsWith("A.")) totalA += i.amount;
+    if (i.category.startsWith("B.")) totalB += i.amount;
+    if (i.category.startsWith("C.")) totalC += i.amount;
+    if (i.category.startsWith("D.")) totalD += i.amount;
+    if (i.category.startsWith("E.")) totalE += i.amount;
+  });
+
+  const totalExpenses = totalB + totalC + totalD;
+  const remaining = totalA - totalExpenses;
+  const finalTotal = remaining + totalC + totalE;
+
+  output.push({ Category: "----------------------------" });
+  output.push({ Category: "SUMMARY" });
+
+  output.push({ Particulars: "TOTAL NO. OF REFILLED GALLONS THIS MONTH & TOTAL SALES", Amount: totalA });
+  output.push({ Particulars: "TOTAL EXPENSES (B–D)", Amount: totalExpenses });
+  output.push({ Particulars: "CASH ON HAND", Amount: totalE });
+  output.push({ Particulars: "TOTAL AMOUNT FOR FINAL DEPOSIT (+/-)", Amount: finalTotal });
+
+  const worksheet = XLSX.utils.json_to_sheet(output);
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Sales Report");
+  XLSX.writeFile(workbook, "Monthly_Sales_Report.xlsx");
+}
+</script>
+
+</body>
+</html>
