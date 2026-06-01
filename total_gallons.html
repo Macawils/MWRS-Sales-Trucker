@@ -77,6 +77,17 @@
     font-size:13px;
   }
 
+  /* Added style for the total display */
+  .total-display {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #e5e7eb;
+    color: #1874ff;
+  }
+
   #modal {
     position:fixed; top:0; left:0; width:100%; height:100%;
     background:rgba(0,0,0,0.5); display:none;
@@ -103,8 +114,6 @@
   <h1>Total Gallons Collected Per Day</h1>
 </div>
 
-
-
 <div class="calendar-container">
   <div class="month-header">
     <button class="btn btn-primary" onclick="changeMonth(-1)">‹</button>
@@ -123,6 +132,8 @@
   </div>
 
   <div class="calendar-grid" id="calendar"></div>
+  
+  <div id="monthlyTotal" class="total-display">Total for Month: 0 gal</div>
 </div>
 
 <div id="modal">
@@ -146,6 +157,7 @@ let selectedDate = "";
 function loadCalendar() {
   const monthLabel = document.getElementById("monthLabel");
   const calendar = document.getElementById("calendar");
+  const totalDisplay = document.getElementById("monthlyTotal");
 
   const monthNames = [
     "January","February","March","April","May","June",
@@ -159,6 +171,8 @@ function loadCalendar() {
   let firstDay = new Date(currentYear, currentMonth, 1).getDay();
   let totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
 
+  let monthlyTotal = 0; // Initialize total counter for the month
+
   for (let i = 0; i < firstDay; i++) {
     calendar.innerHTML += `<div></div>`;
   }
@@ -166,6 +180,11 @@ function loadCalendar() {
   for (let day = 1; day <= totalDays; day++) {
     let dateString = `${currentYear}-${currentMonth+1}-${day}`;
     let gallons = gallonsData[dateString] || "";
+
+    // Add to total if a value exists
+    if (gallons !== "") {
+        monthlyTotal += parseFloat(gallons);
+    }
 
     let isToday =
       day === currentDate.getDate() &&
@@ -179,6 +198,9 @@ function loadCalendar() {
       </div>
     `;
   }
+
+  // Update the total text on the UI
+  totalDisplay.innerText = `Total for Month: ${monthlyTotal} gal`;
 }
 
 function openModal(date) {
@@ -201,7 +223,7 @@ function saveGallons() {
   localStorage.setItem("gallonsData", JSON.stringify(gallonsData));
 
   closeModal();
-  loadCalendar();
+  loadCalendar(); 
 }
 
 function changeMonth(direction) {
